@@ -5,11 +5,15 @@ import smtplib
 from dotenv import load_dotenv
 import os
 from datetime import date
+from pathlib import Path
 
 PORT=465
 EMAIL_SERVER = "smtp.gmail.com"
 
-envars = load_dotenv("/Users/isaacyoon/pycharmProjects/EmailsendYSMJ/.env")
+# Load the environment variables
+current_dir = Path(__file__).resolve().parent if "__file__" in locals() else Path.cwd()
+envars = current_dir / ".env"
+load_dotenv(envars)
   #read info
 sender_email = os.getenv("EMAIL")
 password_email = os.getenv("PASSWORD")
