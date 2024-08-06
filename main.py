@@ -3,9 +3,13 @@ from post_email import post_email
 from flask import Flask, request, send_from_directory, render_template_string, session
 import os
 
+SHEET_ID = "12cKj6sS3JfZjd89BxivhHOYlwRFdhffTc-pMycTLDbA"
+SHEET_NAME = "Class_Roster"
+URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}"
+
 def load_df(url):
-    usecols = ["Name","Email","Completed Latest Work?"]
-    df = pd.read_csv(url,usecols=usecols)
+    usecols = ["Name","Email","Completed Latest Work?", "특수관리"]
+    df = pd.read_csv(url, usecols=usecols, encoding='utf-8')
     return df
 
 def query_broad(df, file, uurl):
@@ -19,10 +23,26 @@ def query_broad(df, file, uurl):
         )
         email_counter += 1
     return f"{email_counter} emails sent"
+
 def query_specific(df, file, uurl):
     email_counter = 0
     for index, row in df.iterrows():
         if row["Completed Latest Work?"] == "Y":
+            post_email(
+                recipient=row["Email"],
+                name=row["Name"],
+                filedir=file,
+                formlink=uurl
+            )
+            email_counter += 1
+        else:
+            continue
+    return f"{email_counter} emails sent"
+
+def query_specific2(df, file, uurl):
+    email_counter = 0
+    for index, row in df.iterrows():
+        if row["특수관리"] == "Y":
             post_email(
                 recipient=row["Email"],
                 name=row["Name"],
@@ -80,6 +100,9 @@ def upload_file():
         <form method="post" action="/broad-email">
           <input type="submit" value="모두에게 보내기">
         </form>
+        <form method="post" action="/specific-email2">
+          <input type="submit" value="특수관리 인물들에게 보내기">
+        </form>
         ''')
 
 @app.route('/uploads/<filename>')
@@ -91,9 +114,6 @@ def uploaded_file(filename):
 def specific_email():
     filepath = session.get('filedir', 'No file uploaded')
     userurl = session.get('user_url', 'No URL provided')
-    SHEET_ID = "12cKj6sS3JfZjd89BxivhHOYlwRFdhffTc-pMycTLDbA"
-    SHEET_NAME = "Class_Roster"
-    URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}"
     emnum = query_specific(load_df(URL), filepath, userurl)
     return f'''
     <!doctype html>
@@ -101,13 +121,23 @@ def specific_email():
     <h1> Number of email(s) sent: {emnum} </h1>
     All email(s) have been sent successfully!
     '''
+
+@app.route('/specific-email2', methods=['POST'])
+def specific_email_2():
+    filepath = session.get('filedir', 'No file uploaded')
+    userurl = session.get('user_url', 'No URL provided')
+    emnum = query_specific2(load_df(URL), filepath, userurl)
+    return f'''
+    <!doctype html>
+    <title>Email Sent</title>
+    <h1> Number of email(s) sent: {emnum} </h1>
+    All email(s) have been sent successfully!
+    '''
+
 @app.route('/broad-email', methods=['POST'])
 def broad_email():
     filepath = session.get('filedir', 'No file uploaded')
     userurl = session.get('user_url', 'No URL provided')
-    SHEET_ID = "12cKj6sS3JfZjd89BxivhHOYlwRFdhffTc-pMycTLDbA"
-    SHEET_NAME = "Class_Roster"
-    URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}"
     emnum = query_broad(load_df(URL), filepath, userurl)
     return f'''
     <!doctype html>
